@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>短视频口播文案生成器 - 1:1 展厅版</title>
+    <style>
+        :root { --primary-color: #7c3aed; --bg-color: #f3f4f6; --card-bg: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --border-color: #e5e7eb; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); margin: 0; padding: 40px 20px; color: var(--text-main); }
+        .header-title { text-align: center; margin-bottom: 30px; }
+        .header-title .icon { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #eef2ff; color: var(--primary-color); border-radius: 10px; font-size: 20px; margin-bottom: 15px; }
+        .header-title h1 { font-size: 24px; color: var(--primary-color); margin: 0 0 10px 0; }
+        .header-title p { font-size: 14px; color: var(--text-muted); margin: 0; }
+        .container { max-width: 700px; margin: 0 auto; background: var(--card-bg); padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .section-header { border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px; }
+        .form-group { margin-bottom: 25px; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        label { font-weight: bold; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; outline: none; }
+        input[type="text"]:focus { border-color: var(--primary-color); }
+        .style-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .style-option { display: flex; align-items: center; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .style-option input { display: none; }
+        .style-option.active { border-color: #3b82f6; background-color: #eff6ff; font-weight: bold; }
+        input[type="range"] { width: 100%; accent-color: var(--primary-color); }
+        button { width: 100%; padding: 14px; background: linear-gradient(to right, #6d28d9, #8b5cf6); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #result-container { display: none; margin-top: 25px; padding: 20px; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="header-title">
+    <div class="icon">✨</div>
+    <h1>短视频口播文案生成器</h1>
+    <p>智能生成主题相关的短视频口播文案，支持 10 种风格</p>
+</div>
+
+<div class="container">
+    <div class="section-header"><h2>文案配置</h2></div>
+
+    <div class="form-group">
+        <label>文案主题</label>
+        <input type="text" id="topic" placeholder="例如：展台搭建" value="展台搭建">
+    </div>
+
+    <div class="form-group">
+        <div class="flex-between"><label>选择风格</label><span id="styleCountDisplay">1</span></div>
+        <div class="style-grid" id="styleGrid">
+            <label class="style-option active"><input type="checkbox" value="干货秘诀型" checked onchange="updateSelection(this)"><span>干货秘诀型</span></label>
+            <label class="style-option"><input type="checkbox" value="避坑提醒型" onchange="updateSelection(this)"><span>避坑提醒型</span></label>
+            <label class="style-option"><input type="checkbox" value="口语接地气型" onchange="updateSelection(this)"><span>口语接地气型</span></label>
+            <label class="style-option"><input type="checkbox" value="专业质感型" onchange="updateSelection(this)"><span>专业质感型</span></label>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="flex-between"><label>生成数量</label><span id="articleCountDisplay">1</span> 篇</div>
+        <input type="range" id="articleSlider" min="1" max="5" value="1" oninput="updateSlider()">
+    </div>
+
+    <button id="generateBtn" onclick="generateCopy()">✨ 开始生成</button>
+    <div id="result-container"></div>
+</div>
+
+<script>
+    let selectedStylesCount = 1;
+    let articleCount = 1;
+
+    function updateSelection(checkbox) {
+        checkbox.parentElement.classList.toggle('active', checkbox.checked);
+        selectedStylesCount = document.querySelectorAll('#styleGrid input:checked').length;
+        document.getElementById('styleCountDisplay').innerText = `已选 ${selectedStylesCount} 种`;
+    }
+
+    function updateSlider() {
+        articleCount = document.getElementById('articleSlider').value;
+        document.getElementById('articleCountDisplay').innerText = articleCount;
+    }
+
+    // 核心：真实请求函数
+    async function generateCopy() {
+        const topic = document.getElementById('topic').value;
+        const checkedBoxes = document.querySelectorAll('#styleGrid input:checked');
+        const resultContainer = document.getElementById('result-container');
+        const btn = document.getElementById('generateBtn');
+
+        if (!topic || checkedBoxes.length === 0) {
+            alert("请完整填写配置！");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "AI 正在创作中...";
+        resultContainer.style.display = 'block';
+        resultContainer.innerText = "请稍候，大脑正在高速运转...";
+
+        let styles = Array.from(checkedBoxes).map(cb => cb.value).join('、');
+        const finalPrompt = `请为主题“${topic}”创作短视频口播文案。要求：包含 ${styles} 风格，生成 ${articleCount} 篇，每篇约150字。`;
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: finalPrompt })
+            });
+            const data = await response.json();
+            resultContainer.innerText = data.text;
+        } catch (error) {
+            resultContainer.innerText = "连接失败，请检查 API 配置或网络";
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "✨ 开始生成";
+        }
+    }
+</script>
+</body>
+</html>
